@@ -25,10 +25,7 @@ ClaimCheck checkClaim({
   if (!staff.active) {
     return const ClaimCheck.denied('Your account is deactivated.');
   }
-  final licenceDate = staff.licenceExpiry.toUtc();
-  final shiftDate = shift.start.toUtc();
-  if (DateTime(licenceDate.year, licenceDate.month, licenceDate.day)
-      .isBefore(DateTime(shiftDate.year, shiftDate.month, shiftDate.day))) {
+  if (staff.licenceExpiry.isBefore(shift.start.toLocal())) {
     return const ClaimCheck.denied('Your licence is not valid on this shift date.');
   }
   if (shift.filled >= shift.slots) {

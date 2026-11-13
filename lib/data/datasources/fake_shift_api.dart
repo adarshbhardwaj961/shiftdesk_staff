@@ -6,27 +6,21 @@ import '../../domain/models/staff_profile.dart';
 import '../../domain/rules/claim_rules.dart';
 
 class FakeShiftApi {
-  FakeShiftApi({this.requestDelay, DateTime Function()? clock})
-      : _clock = clock ?? DateTime.now {
+  FakeShiftApi() {
     _seed();
   }
 
-  final Duration? requestDelay;
-  final DateTime Function() _clock;
   final Random _random = Random(42);
   final Map<String, StaffProfile> _staff = {};
   final List<Shift> _shifts = [];
-  final Map<String, ({String queryKey, String shiftId})> _issuedCursors = {};
+  final Map<String, String> _issuedCursors = {};
   final Map<String, Set<String>> _claims = {};
-  int _nextCursorId = 0;
   String? _activeStaffId;
   bool flakyNetwork = false;
   bool busyHospital = false;
 
   Future<void> _delay() async {
-    await Future.delayed(
-      requestDelay ?? Duration(milliseconds: 300 + _random.nextInt(601)),
-    );
+    await Future.delayed(Duration(milliseconds: 300 + _random.nextInt(601)));
     if (flakyNetwork && _random.nextInt(5) == 0) {
       throw const ApiException(503, 'Network is temporarily unavailable. Please retry.');
     }
@@ -89,40 +83,27 @@ class FakeShiftApi {
     if (limit < 1) throw const ApiException(400, 'Page size must be greater than zero.');
     final safeLimit = min(limit, 50);
     final key = '${department ?? ''}|${from?.toIso8601String() ?? ''}|${to?.toIso8601String() ?? ''}';
-    String? afterShiftId;
+    var offset = 0;
     if (cursor != null) {
-      final issuedCursor = _issuedCursors[cursor];
-      if (issuedCursor == null || issuedCursor.queryKey != key) {
+      final issuedKey = _issuedCursors[cursor];
+      if (issuedKey == null || !issuedKey.startsWith('$key|')) {
         throw const ApiException(400, 'Invalid or expired pagination cursor.');
       }
-      afterShiftId = issuedCursor.shiftId;
+      offset = int.tryParse(issuedKey.substring(key.length + 1)) ?? 0;
     }
-    final filtered = _shifts.where((shift) {
-      if (department != null && department.isNotEmpty && shift.department != department) return false;
-      if (from != null && shift.end.isBefore(from.toUtc())) return false;
-      if (to != null && shift.start.isAfter(to.toUtc())) return false;
+    final filtered = _shifts.where((s) {
+      if (s.filled >= s.slots) return false;
+      if (department != null && department.isNotEmpty && s.department != department) return false;
+      if (from != null && s.end.isBefore(from.toUtc())) return false;
+      if (to != null && s.start.isAfter(to.toUtc())) return false;
       return true;
     }).toList();
-    var startIndex = 0;
-    if (afterShiftId != null) {
-      final anchorIndex = filtered.indexWhere((shift) => shift.id == afterShiftId);
-      if (anchorIndex < 0) {
-        throw const ApiException(400, 'Invalid or expired pagination cursor.');
-      }
-      startIndex = anchorIndex + 1;
-    }
-    final now = _clock().toUtc();
-    final available = filtered
-        .skip(startIndex)
-        .where((shift) =>
-            shift.start.isAfter(now) &&
-            shift.filled < shift.slots)
-        .toList();
-    final pageItems = available.take(safeLimit).map((shift) => shift.copy()).toList();
+    final pageItems = filtered.skip(offset).take(safeLimit).map((s) => s.copy()).toList();
+    final nextOffset = offset + pageItems.length;
     String? next;
-    if (available.length > safeLimit && pageItems.isNotEmpty) {
-      next = 'cursor-${_nextCursorId++}';
-      _issuedCursors[next] = (queryKey: key, shiftId: pageItems.last.id);
+    if (nextOffset < filtered.length) {
+      next = 'cursor-${key.hashCode}-$nextOffset';
+      _issuedCursors[next] = '$key|$nextOffset';
     }
     return ShiftPage(items: pageItems, nextCursor: next);
   }
@@ -148,7 +129,7 @@ class FakeShiftApi {
       throw const ApiException(409, 'This shift was just filled. Please choose another shift.');
     }
     final mine = await _myShiftsWithoutDelay();
-    final check = checkClaim(staff: staff, shift: shift, myShifts: mine, now: _clock());
+    final check = checkClaim(staff: staff, shift: shift, myShifts: mine);
     if (!check.canClaim) throw ApiException(422, check.reason!);
     shift.filled++;
     (_claims[_activeStaffId!] ??= <String>{}).add(shiftId);
