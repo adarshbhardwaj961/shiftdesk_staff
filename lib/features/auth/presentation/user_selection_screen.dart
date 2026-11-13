@@ -27,28 +27,39 @@ class _UserSelectionScreenState extends State<UserSelectionScreen> {
           return const Center(child: CircularProgressIndicator());
         }
         if (auth.error.value != null && auth.staffList.isEmpty) {
-          return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          return Center(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
             Text(auth.error.value!),
-            ElevatedButton(onPressed: auth.loadStaff, child: const Text('Retry')),
+            ElevatedButton(
+                onPressed: auth.loadStaff, child: const Text('Retry')),
           ]));
         }
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            const Text('Select a profile to continue.', style: TextStyle(color: Colors.black54)),
+            const Text('Select a profile to continue.',
+                style: TextStyle(color: Colors.black54)),
             const SizedBox(height: 16),
             for (final person in auth.staffList)
               Card(
                 child: ListTile(
-                  leading: CircleAvatar(child: Text(person.name.substring(0, 1))),
+                  leading:
+                      CircleAvatar(child: Text(person.name.substring(0, 1))),
                   title: Text(person.name),
-                  subtitle: Text('${person.role.label} • ${person.active ? 'Active' : 'Deactivated'}'),
+                  subtitle: Text(
+                      '${person.role.label} • ${person.active ? 'Active' : 'Deactivated'}'),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: auth.isLoading.value ? null : () async {
-                    final ok = await auth.selectStaff(person);
-                    if (ok) Get.offAllNamed(AppRoutes.shifts);
-                    else Get.snackbar('Unable to continue', auth.error.value ?? 'Please try again.');
-                  },
+                  onTap: auth.isLoading.value
+                      ? null
+                      : () async {
+                          final ok = await auth.selectStaff(person);
+                          if (ok) {
+                            Get.offAllNamed(AppRoutes.shifts);
+                          } else {
+                            Get.snackbar('Unable to continue',
+                                auth.error.value ?? 'Please try again.');
+                          }
+                        },
                 ),
               ),
           ],

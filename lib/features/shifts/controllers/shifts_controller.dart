@@ -20,6 +20,8 @@ class ShiftsController extends GetxController {
   final myShiftsError = RxnString();
   final isLoadMoreError = false.obs;
   final department = ''.obs;
+  final filterFrom = Rxn<DateTime>();
+  final filterTo = Rxn<DateTime>();
   String? _cursor;
   bool _hasMore = true;
   int _requestVersion = 0;
@@ -45,6 +47,8 @@ class ShiftsController extends GetxController {
     try {
       final page = await repository.openShifts(
         department: department.value.isEmpty ? null : department.value,
+        from: filterFrom.value,
+        to: _inclusiveFilterEnd(filterTo.value),
         limit: 20,
       );
       if (!_isCurrentRequest(version)) return;
@@ -66,6 +70,8 @@ class ShiftsController extends GetxController {
     try {
       final page = await repository.openShifts(
         department: department.value.isEmpty ? null : department.value,
+        from: filterFrom.value,
+        to: _inclusiveFilterEnd(filterTo.value),
         cursor: cursor,
         limit: 20,
       );
@@ -125,6 +131,20 @@ class ShiftsController extends GetxController {
     department.value = value;
     await loadFirstPage(clearExisting: true);
   }
+
+  Future<void> setDateRange(DateTime? from, DateTime? to) async {
+    if (_disposed) return;
+    final normalizedFrom = from == null ? null : DateTime(from.year, from.month, from.day);
+    final normalizedTo = to == null ? null : DateTime(to.year, to.month, to.day);
+    if (filterFrom.value == normalizedFrom && filterTo.value == normalizedTo) return;
+    filterFrom.value = normalizedFrom;
+    filterTo.value = normalizedTo;
+    await loadFirstPage(clearExisting: true);
+  }
+
+  DateTime? _inclusiveFilterEnd(DateTime? date) => date == null
+      ? null
+      : DateTime(date.year, date.month, date.day + 1).subtract(const Duration(microseconds: 1));
 
   Future<void> loadMyShifts() async {
     if (_disposed) return;

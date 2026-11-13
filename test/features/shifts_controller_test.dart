@@ -63,6 +63,30 @@ void main() {
         [null, null, 'er-page-2']);
   });
 
+  test('changing date range resets pagination and sends the inclusive date window',
+      () async {
+    final repository = _FakeShiftRepository()
+      ..openResponses.addAll([
+        ShiftPage(items: [_shift('all-date')], nextCursor: 'all-page-2'),
+        ShiftPage(items: [_shift('filtered-date')], nextCursor: 'filtered-page-2'),
+        ShiftPage(items: [_shift('filtered-date-2')], nextCursor: null),
+      ]);
+    final controller = ShiftsController(repository);
+    final from = DateTime(2027, 1, 10, 14);
+    final to = DateTime(2027, 1, 12, 18);
+
+    await controller.loadFirstPage();
+    await controller.setDateRange(from, to);
+    await controller.loadMore();
+
+    expect(controller.shifts.map((shift) => shift.id), ['filtered-date', 'filtered-date-2']);
+    expect(repository.openRequests.map((request) => request.cursor), [null, null, 'filtered-page-2']);
+    expect(repository.openRequests[1].from, DateTime(2027, 1, 10));
+    expect(repository.openRequests[1].to, DateTime(2027, 1, 13).subtract(const Duration(microseconds: 1)));
+    expect(repository.openRequests[2].from, repository.openRequests[1].from);
+    expect(repository.openRequests[2].to, repository.openRequests[1].to);
+  });
+
   test('ignores a stale page response after the department changes', () async {
     final stalePage = Completer<ShiftPage>();
     final repository = _FakeShiftRepository()
@@ -226,8 +250,15 @@ Shift _shift(String id) {
 }
 
 class _OpenRequest {
-  const _OpenRequest({required this.department, required this.cursor});
+  const _OpenRequest({
+    required this.department,
+    required this.from,
+    required this.to,
+    required this.cursor,
+  });
   final String? department;
+  final DateTime? from;
+  final DateTime? to;
   final String? cursor;
 }
 
@@ -247,7 +278,12 @@ class _FakeShiftRepository implements ShiftRepository {
     String? cursor,
     int limit = 20,
   }) async {
-    final request = _OpenRequest(department: department, cursor: cursor);
+    final request = _OpenRequest(
+      department: department,
+      from: from,
+      to: to,
+      cursor: cursor,
+    );
     openRequests.add(request);
     if (openPage != null) return openPage!(request);
     final response = openResponses.removeAt(0);

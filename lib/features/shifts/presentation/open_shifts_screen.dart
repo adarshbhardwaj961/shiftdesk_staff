@@ -24,9 +24,24 @@ class _OpenShiftsScreenState extends State<OpenShiftsScreen> {
   }
 
   void _onScroll() {
+    if (!scrollController.hasClients) return;
     if (scrollController.position.pixels >= scrollController.position.maxScrollExtent - 250) {
       controller.loadMore();
     }
+  }
+
+  Future<void> _selectDateRange() async {
+    final today = DateTime.now();
+    final currentFrom = controller.filterFrom.value ?? today;
+    final currentTo = controller.filterTo.value ?? currentFrom.add(const Duration(days: 30));
+    final range = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(today.year, today.month, today.day),
+      lastDate: DateTime(today.year + 2, today.month, today.day),
+      initialDateRange: DateTimeRange(start: currentFrom, end: currentTo),
+    );
+    if (!mounted || range == null) return;
+    await controller.setDateRange(range.start, range.end);
   }
 
   @override
@@ -64,17 +79,35 @@ class _OpenShiftsScreenState extends State<OpenShiftsScreen> {
         children: [
           Obx(() => Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: Row(children: [
-              Expanded(child: Text('Hello, ${staff.value?.name ?? 'Staff'}', style: Theme.of(context).textTheme.titleMedium)),
-              DropdownButton<String>(
-                value: controller.department.value,
-                hint: const Text('All departments'),
-                items: [
-                  const DropdownMenuItem(value: '', child: Text('All departments')),
-                  ...controller.departments.map((d) => DropdownMenuItem(value: d, child: Text(d))),
-                ],
-                onChanged: (value) => controller.setDepartment(value ?? ''),
-              ),
+            child: Column(children: [
+              Row(children: [
+                Expanded(child: Text('Hello, ${staff.value?.name ?? 'Staff'}', style: Theme.of(context).textTheme.titleMedium)),
+                DropdownButton<String>(
+                  value: controller.department.value,
+                  hint: const Text('All departments'),
+                  items: [
+                    const DropdownMenuItem(value: '', child: Text('All departments')),
+                    ...controller.departments.map((d) => DropdownMenuItem(value: d, child: Text(d))),
+                  ],
+                  onChanged: (value) => controller.setDepartment(value ?? ''),
+                ),
+              ]),
+              Row(children: [
+                TextButton.icon(
+                  onPressed: _selectDateRange,
+                  icon: const Icon(Icons.calendar_today),
+                  label: Text(
+                    controller.filterFrom.value == null
+                        ? 'Any date'
+                        : '${DateFormat('d MMM').format(controller.filterFrom.value!)} – ${DateFormat('d MMM').format(controller.filterTo.value!)}',
+                  ),
+                ),
+                if (controller.filterFrom.value != null)
+                  TextButton(
+                    onPressed: () => controller.setDateRange(null, null),
+                    child: const Text('Clear'),
+                  ),
+              ]),
             ]),
           )),
           Expanded(
