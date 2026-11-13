@@ -50,3 +50,37 @@ Assumption: the fake API data and bookings live in memory and reset when the app
 ## AI usage
 
 See `AI_USAGE.md`.
+
+## lib/ folder structure
+
+lib/
+│
+├── main.dart
+│   # Entry point of the Flutter application.
+│   # The app starts executing from this file.
+│
+├── app/
+│   # Contains global app configuration.
+│   # Includes routes, navigation, and dependency bindings.
+│
+├── core/
+│   # Contains common functionality used across the app.
+│   # Includes constants, helpers, utilities, and shared services.
+│
+├── features/
+│   # Contains separate application features.
+│
+│   └── developer/
+│       # Contains developer tools and testing functionality.
+│
+│       ├── controllers/
+│       │   # Contains GetX controllers and feature business logic.
+│       │
+│       └── presentation/
+│           # Contains UI screens and widgets.
+│
+├── data/
+│   # Handles data operations, repositories, and API integration.
+│
+└── models/
+# Defines data models and their properties.
