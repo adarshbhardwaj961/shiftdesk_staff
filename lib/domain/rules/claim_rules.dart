@@ -16,13 +16,19 @@ ClaimCheck checkClaim({
 }) {
   final currentTime = now ?? DateTime.now();
 
+  if (shift.start.isBefore(currentTime)) {
+    return const ClaimCheck.denied('This shift has already started.');
+  }
   if (staff.role != shift.requiredRole) {
     return const ClaimCheck.denied('This shift needs a different role.');
   }
   if (!staff.active) {
     return const ClaimCheck.denied('Your account is deactivated.');
   }
-  if (staff.licenceExpiry.isBefore(shift.start.toLocal())) {
+  final licenceDate = staff.licenceExpiry.toUtc();
+  final shiftDate = shift.start.toUtc();
+  if (DateTime(licenceDate.year, licenceDate.month, licenceDate.day)
+      .isBefore(DateTime(shiftDate.year, shiftDate.month, shiftDate.day))) {
     return const ClaimCheck.denied('Your licence is not valid on this shift date.');
   }
   if (shift.filled >= shift.slots) {
