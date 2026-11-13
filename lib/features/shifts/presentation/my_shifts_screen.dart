@@ -25,6 +25,24 @@ class _MyShiftsScreenState extends State<MyShiftsScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('My shifts')),
       body: Obx(() {
+        if (controller.isLoadingMyShifts.value && controller.myShifts.isEmpty) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (controller.myShiftsError.value != null && controller.myShifts.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(controller.myShiftsError.value!, textAlign: TextAlign.center),
+                  const SizedBox(height: 12),
+                  ElevatedButton(onPressed: controller.loadMyShifts, child: const Text('Retry')),
+                ],
+              ),
+            ),
+          );
+        }
         if (controller.myShifts.isEmpty) return const Center(child: Text('You have no upcoming shifts.'));
         final grouped = <DateTime, List<Shift>>{};
         for (final shift in controller.myShifts) {
@@ -34,6 +52,11 @@ class _MyShiftsScreenState extends State<MyShiftsScreen> {
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            if (controller.myShiftsError.value != null)
+              TextButton(
+                onPressed: controller.loadMyShifts,
+                child: Text('Could not refresh your shifts. Retry: ${controller.myShiftsError.value}'),
+              ),
             for (final week in weeks) ...[
               Text('Week of ${DateFormat('d MMM').format(week)}', style: Theme.of(context).textTheme.titleMedium),
               Text('${grouped[week]!.fold<double>(0, (sum, s) => sum + s.end.difference(s.start).inMinutes / 60)} booked hours', style: const TextStyle(color: Colors.black54)),

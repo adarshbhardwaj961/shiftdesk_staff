@@ -95,7 +95,15 @@ class _OpenShiftsScreenState extends State<OpenShiftsScreen> {
                   itemBuilder: (context, index) {
                     if (index >= controller.shifts.length) {
                       if (controller.error.value != null) {
-                        return TextButton(onPressed: controller.loadMore, child: Text('Could not load more. Retry: ${controller.error.value}'));
+                        return TextButton(
+                          onPressed: controller.isLoadMoreError.value
+                              ? controller.retryLoadMore
+                              : controller.loadFirstPage,
+                          child: Text(
+                            '${controller.isLoadMoreError.value ? 'Could not load more' : 'Could not refresh shifts'}. '
+                            'Retry: ${controller.error.value}',
+                          ),
+                        );
                       }
                       return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()));
                     }

@@ -38,8 +38,10 @@ class FakeShiftApi {
     const roles = StaffRole.values;
     for (var i = 0; i < 5000; i++) {
       final dayOffset = i % 90;
-      final hour = 6 + (i * 7) % 16;
-      final start = today.add(Duration(days: dayOffset, hours: hour));
+      final slotInDay = i ~/ 90;
+      final start = today.add(
+        Duration(days: dayOffset, hours: 6, minutes: slotInDay * 15),
+      );
       final duration = 4 + (i % 5);
       final slots = 2 + (i % 4);
       _shifts.add(Shift(
@@ -52,7 +54,10 @@ class FakeShiftApi {
         filled: i % (slots + 1),
       ));
     }
-    _shifts.sort((a, b) => a.start.compareTo(b.start));
+    _shifts.sort((a, b) {
+      final startComparison = a.start.compareTo(b.start);
+      return startComparison != 0 ? startComparison : a.id.compareTo(b.id);
+    });
   }
 
   Future<List<StaffProfile>> listStaff() async {
@@ -118,10 +123,11 @@ class FakeShiftApi {
     if (staff == null) throw const ApiException(401, 'Please choose a staff member.');
     final index = _shifts.indexWhere((s) => s.id == shiftId);
     if (index < 0) throw const ApiException(404, 'Shift not found.');
+    final shift = _shifts[index];
     if (busyHospital && _random.nextInt(3) == 0) {
+      shift.filled = shift.slots;
       throw const ApiException(409, 'This shift was just filled. Please choose another shift.');
     }
-    final shift = _shifts[index];
     final mine = await _myShiftsWithoutDelay();
     final check = checkClaim(staff: staff, shift: shift, myShifts: mine);
     if (!check.canClaim) throw ApiException(422, check.reason!);

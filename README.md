@@ -37,7 +37,7 @@ Open the overflow menu on the Open Shifts screen and select Developer settings.
 
 Run `flutter test`.
 
-The claim-rule unit tests cover role, active status, capacity, overlap/back-to-back, duplicates and weekly hours. A basic widget smoke test is included.
+The claim-rule tests cover role, active status, capacity, overlap/back-to-back, duplicates and weekly hours. Shift-controller regression tests cover pagination deduplication, filter resets and stale requests, retry behavior after 503 errors, 409 claim conflicts, loading/error state, and disposal. A widget smoke test is included.
 
 ## Current implementation and trade-offs
 
